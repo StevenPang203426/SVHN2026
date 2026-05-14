@@ -1,66 +1,84 @@
 """
-超参数配置与数据路径定义
-支持通过 argparse 覆盖，或通过预设实验方案快速切换
+YAML 配置加载器
+加载顺序: default.yaml -> 实验 yaml -> 命令行参数覆盖
 """
-
 import os
 import argparse
+import yaml
 
 
 class Config:
-    """全局配置（默认值 = Baseline 方案）"""
+    """配置容器, 支持属性访问"""
 
-    # ── 数据集 ──
-    dataset_path = "./data"
+    def __init__(self, cfg_dict=None):
+        if cfg_dict:
+            for k, v in cfg_dict.items():
+                setattr(self, k, v)
 
-    # ── 训练参数 ──
-    batch_size = 64
-    lr = 1e-3
-    momentum = 0.9
-    weight_decay = 1e-4
-    class_num = 11
-    num_workers = 8
+    def merge(self, other_dict):
+        """用字典覆盖当前配置 (仅覆盖非 None 值)"""
+        for k, v in other_dict.items():
+            if v is not None:
+                setattr(self, k, v)
 
-    # ── 训练调度 ──
-    start_epoch = 0
-    epochs = 50
-    eval_interval = 1
-    print_interval = 50
+    def to_dict(self):
+        return {k: v for k, v in vars(self).items() if not k.startswith('_')}
 
-    # ── 模型 ──
-    model_name = "resnet50"          # resnet50 | se_resnet50 | resnet50_no_bn
-    pretrained_backbone = True
-    pretrained = None                # 载入训练好的权重路径
-    checkpoints = "./checkpoints"
+    def __repr__(self):
+        items = ', '.join('%s=%r' % (k, v) for k, v in self.to_dict().items())
+        return 'Config(%s)' % items
 
-    # ── 损失函数 ──
-    loss_type = "label_smooth"       # label_smooth | focal | ce
-    smooth = 0.1
-    focal_alpha = 0.25
-    focal_gamma = 2.0
 
-    # ── 数据增强 ──
-    aug_level = "medium"             # light | medium | strong | extreme
-    img_h = 128
-    img_w = 224
-    use_cutout = False
-    use_mixup = False
-    mixup_alpha = 0.2
+def _find_configs_dir():
+    """自动定位 configs/ 目录"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(here)
+    return os.path.join(project_root, 'configs')
 
-    # ── 学习率策略 ──
-    scheduler = "cosine_warm"        # cosine_warm | step | one_cycle
-    T_0 = 10
-    T_mult = 2
-    milestones = [20, 35, 45]
-    gamma = 0.1
 
-    # ── 日志 ──
-    use_wandb = False
-    wandb_project = "svhn-recognition"
-    experiment_name = "baseline"
+def load_yaml(path):
+    """加载单个 YAML 文件"""
+    with open(path, 'r', encoding='utf-8') as f:
+        return yaml.safe_load(f) or {}
 
-    # ── TTA ──
-    use_tta = False
+
+def load_config(config_path=None):
+    """
+    加载配置: default.yaml -> 指定的实验 yaml
+
+    Args:
+        config_path: 实验 yaml 路径, 可以是:
+            - 完整路径: "configs/baseline.yaml"
+            - 仅文件名: "baseline.yaml"
+            - 仅名称:   "baseline"
+    Returns:
+        Config 实例
+    """
+    configs_dir = _find_configs_dir()
+
+    # 1) 加载 default.yaml
+    default_path = os.path.join(configs_dir, 'default.yaml')
+    if os.path.exists(default_path):
+        cfg_dict = load_yaml(default_path)
+    else:
+        cfg_dict = {}
+
+    # 2) 加载实验 yaml (覆盖 default)
+    if config_path is not None:
+        # 支持多种传入方式
+        if not os.path.exists(config_path):
+            # 尝试在 configs/ 下查找
+            if not config_path.endswith('.yaml'):
+                config_path = config_path + '.yaml'
+            config_path = os.path.join(configs_dir, config_path)
+
+        if os.path.exists(config_path):
+            exp_dict = load_yaml(config_path)
+            cfg_dict.update(exp_dict)
+        else:
+            raise FileNotFoundError("Config not found: %s" % config_path)
+
+    return Config(cfg_dict)
 
 
 def get_data_dir(cfg):
@@ -76,58 +94,11 @@ def get_data_dir(cfg):
     }
 
 
-# ── 预设实验方案 ──
-
-EXPERIMENT_PRESETS = {
-    "baseline": {},
-
-    "improved_v1": {
-        "model_name": "se_resnet50",
-        "aug_level": "strong",
-        "use_cutout": True,
-        "lr": 5e-4,
-        "epochs": 60,
-        "scheduler": "cosine_warm",
-        "experiment_name": "improved_v1_se_resnet50",
-    },
-
-    "improved_v2": {
-        "model_name": "resnet50",
-        "aug_level": "strong",
-        "use_cutout": True,
-        "use_mixup": True,
-        "loss_type": "focal",
-        "lr": 3e-4,
-        "epochs": 60,
-        "scheduler": "one_cycle",
-        "experiment_name": "improved_v2_focal_mixup",
-    },
-
-    "ablation_no_bn": {
-        "model_name": "resnet50_no_bn",
-        "aug_level": "medium",
-        "lr": 1e-4,
-        "epochs": 30,
-        "experiment_name": "ablation_no_bn",
-    },
-
-    "ablation_extreme_aug": {
-        "model_name": "resnet50",
-        "aug_level": "extreme",
-        "use_cutout": True,
-        "epochs": 30,
-        "experiment_name": "ablation_extreme_aug",
-    },
-}
-
-
 def parse_args():
-    """命令行参数解析"""
+    """命令行参数 (优先级最高, 覆盖 yaml)"""
     parser = argparse.ArgumentParser(description="SVHN Street Character Recognition")
-
-    parser.add_argument("--experiment", type=str, default=None,
-                        choices=list(EXPERIMENT_PRESETS.keys()),
-                        help="使用预设实验方案")
+    parser.add_argument("--config", type=str, default=None,
+                        help="实验配置 yaml (如 baseline, improved_v1)")
     parser.add_argument("--model", type=str, default=None, dest="model_name")
     parser.add_argument("--loss", type=str, default=None, dest="loss_type")
     parser.add_argument("--aug", type=str, default=None, dest="aug_level")
@@ -135,44 +106,43 @@ def parse_args():
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--scheduler", type=str, default=None)
-    parser.add_argument("--use_wandb", action="store_true", default=False)
-    parser.add_argument("--use_cutout", action="store_true", default=False)
-    parser.add_argument("--use_mixup", action="store_true", default=False)
-    parser.add_argument("--use_tta", action="store_true", default=False)
+    parser.add_argument("--use_wandb", action="store_true", default=None)
+    parser.add_argument("--use_cutout", action="store_true", default=None)
+    parser.add_argument("--use_mixup", action="store_true", default=None)
+    parser.add_argument("--use_tta", action="store_true", default=None)
     parser.add_argument("--pretrained", type=str, default=None)
     parser.add_argument("--data_path", type=str, default=None, dest="dataset_path")
     parser.add_argument("--name", type=str, default=None, dest="experiment_name")
     parser.add_argument("--num_workers", type=int, default=None)
-
     return parser.parse_args()
 
 
 def build_config(args=None):
     """
-    构建最终配置：默认值 → 预设方案覆盖 → 命令行参数覆盖
+    构建最终配置:
+        default.yaml -> 实验 yaml -> 命令行参数
 
     Args:
-        args: parse_args() 的返回值，为 None 时使用默认配置
+        args: parse_args() 返回值
     Returns:
         Config 实例
     """
-    cfg = Config()
-
-    # 1) 预设方案覆盖
-    if args is not None and args.experiment is not None:
-        preset = EXPERIMENT_PRESETS[args.experiment]
-        for k, v in preset.items():
-            setattr(cfg, k, v)
-
-    # 2) 命令行参数覆盖（仅覆盖显式传入的参数）
+    config_name = None
     if args is not None:
-        for k, v in vars(args).items():
-            if v is not None and k != "experiment":
-                setattr(cfg, k, v)
+        config_name = getattr(args, 'config', None)
+
+    # 1) 加载 yaml
+    cfg = load_config(config_name)
+
+    # 2) 命令行覆盖
+    if args is not None:
+        cli = {k: v for k, v in vars(args).items()
+               if v is not None and k != 'config'}
+        cfg.merge(cli)
 
     return cfg
 
 
-# 默认全局配置（兼容旧代码直接 import）
-config = Config()
+# ── 兼容旧代码: 直接 import 时提供默认配置 ──
+config = load_config()
 data_dir = get_data_dir(config)

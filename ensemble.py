@@ -31,7 +31,7 @@ from tqdm import tqdm
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import Config, get_data_dir
+from config import load_config, get_data_dir
 from datasets.dataset import DigitsDataset
 from models import build_model
 
@@ -40,7 +40,7 @@ def load_models(model_paths, arch_names, device):
     """Load multiple models."""
     models = []
     for path, arch in zip(model_paths, arch_names):
-        cfg = Config()
+        cfg = load_config()
         cfg.model_name = arch
         model = build_model(cfg).to(device)
         ckpt = torch.load(path, map_location=device)

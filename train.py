@@ -2,30 +2,29 @@
 训练入口脚本
 
 用法:
-    # Baseline
+    # Baseline (default.yaml)
     python train.py
 
-    # 使用预设实验方案
-    python train.py --experiment improved_v1
-    python train.py --experiment improved_v2
-    python train.py --experiment ablation_no_bn
-    python train.py --experiment ablation_extreme_aug
+    # 使用实验配置
+    python train.py --config baseline
+    python train.py --config improved_v1
+    python train.py --config improved_v2
+    python train.py --config ablation_no_bn
+    python train.py --config ablation_extreme_aug
 
-    # 自定义参数
-    python train.py --model se_resnet50 --loss focal --aug strong --lr 5e-4 --epochs 60
+    # 自定义参数 (覆盖 yaml)
+    python train.py --config baseline --lr 5e-4 --epochs 60
 
     # 启用 wandb 追踪
-    python train.py --experiment improved_v1 --use_wandb
+    python train.py --config improved_v1 --use_wandb
 """
 
 import sys
 import os
 
-# 将项目根目录加入 Python 路径
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import parse_args, build_config, get_data_dir
-from datasets import download_and_extract
 from engine import Trainer
 
 
@@ -35,32 +34,30 @@ def main():
     data_dir = get_data_dir(cfg)
 
     print("=" * 60)
-    print(f"  Experiment: {cfg.experiment_name}")
-    print(f"  Model:      {cfg.model_name}")
-    print(f"  Loss:       {cfg.loss_type} (smooth={cfg.smooth})")
-    print(f"  Aug:        {cfg.aug_level} | Cutout={cfg.use_cutout} | MixUp={cfg.use_mixup}")
-    print(f"  LR:         {cfg.lr} | Scheduler: {cfg.scheduler}")
-    print(f"  Epochs:     {cfg.epochs} | Batch: {cfg.batch_size}")
-    print(f"  wandb:      {cfg.use_wandb}")
+    print("  Experiment: %s" % cfg.experiment_name)
+    print("  Model:      %s" % cfg.model_name)
+    print("  Loss:       %s (smooth=%s)" % (cfg.loss_type, cfg.smooth))
+    print("  Aug:        %s | Cutout=%s | MixUp=%s" % (cfg.aug_level, cfg.use_cutout, cfg.use_mixup))
+    print("  LR:         %s | Scheduler: %s" % (cfg.lr, cfg.scheduler))
+    print("  Epochs:     %s | Batch: %s" % (cfg.epochs, cfg.batch_size))
+    print("  wandb:      %s" % cfg.use_wandb)
     print("=" * 60)
 
-    # 1. 检查数据（不再自动下载，避免网络问题）
+    # 检查数据
     label_file = data_dir['train_label']
     if not os.path.exists(label_file):
-        print(f"\n[ERROR] 标签文件不存在: {label_file}")
-        print("请先运行: python data/download.py")
-        print("或手动下载 mchar_train.json / mchar_val.json 到 data/ 目录")
+        print("\n[ERROR] 标签文件不存在: %s" % label_file)
+        print("请先运行: python scripts/fix_labels.py")
         return
 
-    # 2. 训练
+    # 训练
     trainer = Trainer(cfg, data_dir, val=True)
     best_acc = trainer.train()
 
-    print(f"\n{'=' * 60}")
-    print(f"  训练完成！")
-    print(f"  最优验证准确率: {best_acc * 100:.2f}%")
-    print(f"  最优模型路径:   {trainer.best_checkpoint_path}")
-    print(f"{'=' * 60}")
+    print("\n" + "=" * 60)
+    print("  训练完成！最优验证准确率: %.2f%%" % (best_acc * 100))
+    print("  最优模型路径: %s" % trainer.best_checkpoint_path)
+    print("=" * 60)
 
     return trainer
 
