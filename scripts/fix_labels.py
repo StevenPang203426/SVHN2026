@@ -2,12 +2,14 @@
 修复脚本：重新下载被覆盖的 JSON 标签文件
 在你的本机运行（非沙盒环境）：
     cd Street_Character_Recognition
-    python fix_labels.py
+    python scripts/fix_labels.py
 """
 import os
 import requests
 
-DATA_DIR = "./data"
+# 定位到项目根目录
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
 
 FILES = {
     "mchar_train.json": "http://tianchi-competition.oss-cn-hangzhou.aliyuncs.com/531795/mchar_train.json",
@@ -31,4 +33,4 @@ for name, url in FILES.items():
     else:
         print("  SKIP %s (already exists, %d bytes)" % (name, os.path.getsize(path)))
 
-print("\nDone. You can now run: python train.py")
+print("\nDone. You can now run: python train.py --config baseline")

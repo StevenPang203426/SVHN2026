@@ -1,0 +1,56 @@
+# ============================================================
+#  默认配置 — 所有实验的基准参数
+#  各实验 YAML 只需覆盖与默认不同的字段
+# ============================================================
+
+# ── 数据集 ──
+dataset_path: "./data"
+
+# ── 训练参数 ──
+batch_size: 64
+lr: 0.001
+momentum: 0.9
+weight_decay: 0.0001
+class_num: 11
+num_workers: 8
+
+# ── 训练调度 ──
+start_epoch: 0
+epochs: 50
+eval_interval: 1
+print_interval: 50
+
+# ── 模型 ──
+model_name: "resnet50"           # resnet50 | se_resnet50 | resnet50_no_bn
+pretrained_backbone: true
+pretrained: null                 # 载入已训练权重的路径
+checkpoints: "./checkpoints"
+
+# ── 损失函数 ──
+loss_type: "label_smooth"        # label_smooth | focal | ce
+smooth: 0.1
+focal_alpha: 0.25
+focal_gamma: 2.0
+
+# ── 数据增强 ──
+aug_level: "medium"              # light | medium | strong | extreme
+img_h: 128
+img_w: 224
+use_cutout: false
+use_mixup: false
+mixup_alpha: 0.2
+
+# ── 学习率策略 ──
+scheduler: "cosine_warm"         # cosine_warm | step | one_cycle
+T_0: 10
+T_mult: 2
+milestones: [20, 35, 45]
+gamma: 0.1
+
+# ── 日志 ──
+use_wandb: false
+wandb_project: "svhn-recognition"
+experiment_name: "default"
+
+# ── TTA ──
+use_tta: false

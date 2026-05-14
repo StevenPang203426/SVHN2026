@@ -20,13 +20,8 @@ env/
 .python-version
 
 # ── 数据集（体积大，不入库） ──
-data/mchar_train/
-data/mchar_val/
-data/mchar_test_a/
-data/*.zip
-data/*.json
-data/*.csv
-data/yolo/
+
+datasets/data
 
 # ── 模型权重 ──
 checkpoints/
@@ -54,7 +49,9 @@ Thumbs.db
 
 # ── Jupyter ──
 .ipynb_checkpoints/
-*.ipynb
+
+# ── 归档（旧代码，不入库） ──
+archive/
 
 # ── 系统文件 ──
 __MACOSX/

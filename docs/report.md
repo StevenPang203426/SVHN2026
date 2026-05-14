@@ -187,7 +187,16 @@ python ensemble.py \
 
 ```
 Street_Character_Recognition/
-├── config/                  # 配置层：超参数、预设实验方案
+├── config/                  # Python 包：配置加载逻辑
+│   ├── __init__.py
+│   └── config.py            #   load_config(), build_config(), parse_args()
+├── configs/                 # YAML 配置文件（一个实验一个文件）
+│   ├── default.yaml         #   全量默认参数
+│   ├── baseline.yaml
+│   ├── improved_v1.yaml
+│   ├── improved_v2.yaml
+│   ├── ablation_no_bn.yaml
+│   └── ablation_extreme_aug.yaml
 ├── datasets/                # 数据层：Dataset、增强、YOLO 格式转换
 │   ├── dataset.py           #   DigitsDataset + Cutout + MixUp
 │   ├── download.py          #   数据下载与解压
@@ -196,15 +205,23 @@ Street_Character_Recognition/
 ├── losses/                  # 损失层：LabelSmooth / Focal / CE
 ├── engine/                  # 训练引擎：Trainer（含 wandb 集成）
 ├── utils/                   # 工具层：推理（含 TTA）、可视化
+├── scripts/                 # 自动化脚本
+│   ├── train.sh             #   一键运行全部实验
+│   ├── predict.sh           #   一键推理
+│   ├── setup.sh             #   环境搭建（uv + 国内镜像）
+│   └── fix_labels.py        #   修复标签文件
+├── docs/                    # 文档
+│   ├── report.md            #   实验报告（本文件）
+│   └── config_guide.md      #   配置文件编写指南
+├── archive/                 # 归档（重构前的旧代码）
+│   ├── baseline.py
+│   └── baseline.ipynb
 ├── train.py                 # 分类训练入口
-├── train.sh                 # 一键运行全部实验
 ├── predict.py               # 分类推理入口（支持 TTA）
-├── predict.sh               # 一键推理
 ├── train_yolo.py            # YOLO 目标检测训练
 ├── predict_yolo.py          # YOLO 推理（按 x 坐标排序拼接）
 ├── ensemble.py              # 模型集成（logits 平均 / 投票）
-├── fix_labels.py            # 修复标签文件的工具脚本
-└── report.md                # 本报告
+└── requirements.txt         # 依赖列表
 ```
 
 ## 十一、参考资源

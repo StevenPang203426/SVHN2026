@@ -1,0 +1,16 @@
+# ============================================================
+#  改进方案 2 — Focal Loss + MixUp + OneCycle LR
+#  核心改进: Focal 关注困难样本 + MixUp 平滑决策边界
+#  预期 Val Acc: ~91%
+# ============================================================
+
+experiment_name: "improved_v2_focal_mixup"
+model_name: "resnet50"
+loss_type: "focal"
+aug_level: "strong"
+use_cutout: true
+use_mixup: true
+mixup_alpha: 0.2
+lr: 0.0003
+epochs: 60
+scheduler: "one_cycle"

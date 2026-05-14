@@ -1,0 +1,14 @@
+# ============================================================
+#  改进方案 1 — SE-ResNet50 + 强增强 + Cutout
+#  核心改进: SE 通道注意力 + Cutout 正则化
+#  预期 Val Acc: ~90%
+# ============================================================
+
+experiment_name: "improved_v1_se_resnet50"
+model_name: "se_resnet50"
+loss_type: "label_smooth"
+aug_level: "strong"
+use_cutout: true
+lr: 0.0005
+epochs: 60
+scheduler: "cosine_warm"

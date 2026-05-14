@@ -1,0 +1,12 @@
+# ============================================================
+#  Baseline — ResNet50 + LabelSmooth + medium aug
+#  预期 Val Acc: ~86%
+# ============================================================
+
+experiment_name: "baseline"
+model_name: "resnet50"
+loss_type: "label_smooth"
+aug_level: "medium"
+lr: 0.001
+epochs: 50
+scheduler: "cosine_warm"

@@ -1,0 +1,13 @@
+# ============================================================
+#  消融实验 A — 去除 BatchNorm 层
+#  目的: 验证 BN 对深层网络训练稳定性的关键作用
+#  预期 Val Acc: <60% (大幅下降，印证 BN 的必要性)
+# ============================================================
+
+experiment_name: "ablation_no_bn"
+model_name: "resnet50_no_bn"
+loss_type: "label_smooth"
+aug_level: "medium"
+lr: 0.0001                       # 降低学习率防止梯度爆炸
+epochs: 30
+scheduler: "cosine_warm"

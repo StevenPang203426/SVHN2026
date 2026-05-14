@@ -3,12 +3,11 @@
 #  环境搭建脚本 — 使用 uv + 国内镜像源
 #
 #  用法:
-#    chmod +x setup.sh
-#    ./setup.sh
+#    bash scripts/setup.sh
 # ============================================================
 
 set -e
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 echo "============================================"
 echo "  SVHN 街景字符识别 — 环境搭建"
@@ -61,6 +60,6 @@ echo "  环境搭建完成!"
 echo ""
 echo "  下一步:"
 echo "    1. source .venv/bin/activate"
-echo "    2. python fix_labels.py"
-echo "    3. python train.py --experiment baseline"
+echo "    2. python scripts/fix_labels.py"
+echo "    3. python train.py --config baseline"
 echo "============================================"

@@ -1,0 +1,14 @@
+# ============================================================
+#  消融实验 B — 过度数据增强
+#  目的: 验证增强过度反而破坏数据分布，导致性能下降
+#  预期 Val Acc: ~70% (大幅低于 baseline)
+# ============================================================
+
+experiment_name: "ablation_extreme_aug"
+model_name: "resnet50"
+loss_type: "label_smooth"
+aug_level: "extreme"
+use_cutout: true
+lr: 0.001
+epochs: 30
+scheduler: "cosine_warm"

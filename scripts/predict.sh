@@ -3,14 +3,13 @@
 #  SVHN 街道字符识别 — 推理脚本
 #
 #  用法:
-#    chmod +x predict.sh
-#    ./predict.sh                                    # 使用最新 best 模型
-#    ./predict.sh checkpoints/xxx.pth result.csv     # 指定模型和输出
+#    bash scripts/predict.sh                                    # 使用最新 best 模型
+#    bash scripts/predict.sh checkpoints/xxx.pth result.csv     # 指定模型和输出
 # =============================================================================
 
 set -e
 
-cd "$(dirname "$0")"
+cd "$(dirname "$0")/.."
 
 MODEL_PATH=${1:-""}
 OUTPUT=${2:-"result.csv"}
