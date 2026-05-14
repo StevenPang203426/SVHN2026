@@ -6,7 +6,7 @@
     python train.py
 
     # 使用实验配置
-    python train.py --config baseline --data_path data
+    python train.py --config baseline
     python train.py --config improved_v1
     python train.py --config improved_v2
     python train.py --config ablation_no_bn
