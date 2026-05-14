@@ -81,13 +81,29 @@ def load_config(config_path=None):
     return Config(cfg_dict)
 
 
+def _resolve_img_dir(base, name):
+    """
+    自动探测图像目录, 兼容两种解压结构:
+        data/mchar_train/mchar_train/*.png  (双层嵌套)
+        data/mchar_train/*.png              (单层)
+    """
+    nested = os.path.join(base, name, name)
+    flat = os.path.join(base, name)
+    if os.path.isdir(nested):
+        return nested + os.sep
+    elif os.path.isdir(flat):
+        return flat + os.sep
+    # 都不存在时返回嵌套路径 (后续会在 dataset 报错)
+    return nested + os.sep
+
+
 def get_data_dir(cfg):
     """根据 config 构建数据路径索引"""
     p = cfg.dataset_path
     return {
-        'train_data': os.path.join(p, 'mchar_train', 'mchar_train') + os.sep,
-        'val_data': os.path.join(p, 'mchar_val', 'mchar_val') + os.sep,
-        'test_data': os.path.join(p, 'mchar_test_a', 'mchar_test_a') + os.sep,
+        'train_data': _resolve_img_dir(p, 'mchar_train'),
+        'val_data': _resolve_img_dir(p, 'mchar_val'),
+        'test_data': _resolve_img_dir(p, 'mchar_test_a'),
         'train_label': os.path.join(p, 'mchar_train.json'),
         'val_label': os.path.join(p, 'mchar_val.json'),
         'submit_file': os.path.join(p, 'mchar_sample_submit_A.csv'),

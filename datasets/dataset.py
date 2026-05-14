@@ -123,14 +123,27 @@ class DigitsDataset(Dataset):
         if mode == 'test':
             self.imgs = sorted(glob(data_dir['test_data'] + '*.png'))
             self.labels = None
+            print("[Dataset] test: %d images from %s" % (len(self.imgs), data_dir['test_data']))
         else:
-            labels = json.load(open(data_dir['%s_label' % mode], 'r'))
-            imgs = sorted(glob(data_dir['%s_data' % mode] + '*.png'))
+            label_path = data_dir['%s_label' % mode]
+            img_dir = data_dir['%s_data' % mode]
+            if not os.path.exists(label_path):
+                raise FileNotFoundError("Label file not found: %s" % label_path)
+            labels = json.load(open(label_path, 'r'))
+            imgs = sorted(glob(img_dir + '*.png'))
+            if len(imgs) == 0:
+                print("[Dataset] WARNING: 0 images found in %s" % img_dir)
+                print("[Dataset]   Checking parent: %s" % os.path.dirname(img_dir.rstrip(os.sep)))
+                parent = os.path.dirname(img_dir.rstrip(os.sep))
+                if os.path.isdir(parent):
+                    print("[Dataset]   Contents: %s" % os.listdir(parent)[:10])
             self.imgs = [
                 (img, labels[os.path.split(img)[-1]])
                 for img in imgs
                 if os.path.split(img)[-1] in labels
             ]
+            print("[Dataset] %s: %d images (from %d files), %d labels" % (
+                mode, len(self.imgs), len(imgs), len(labels)))
 
     def __getitem__(self, idx):
         if self.mode != 'test':
