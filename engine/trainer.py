@@ -86,9 +86,10 @@ class Trainer:
                 self._log({"val/acc": va*100, "val/time": vt}, step=epoch)
                 print("[Epoch %d] Val Acc: %.2f%% (%.1fs)" % (epoch+1, va*100, vt))
                 if va > self.best_acc:
-                    os.makedirs(self.cfg.checkpoints, exist_ok=True)
-                    fn = "%s-ep%d-acc%.2f.pth" % (self.cfg.experiment_name, epoch+1, va*100)
-                    sp = os.path.join(self.cfg.checkpoints, fn)
+                    save_dir = os.path.join(self.cfg.checkpoints, self.cfg.experiment_name)
+                    os.makedirs(save_dir, exist_ok=True)
+                    fn = "ep%d-acc%.2f.pth" % (epoch+1, va*100)
+                    sp = os.path.join(save_dir, fn)
                     self.save_model(sp)
                     print("  Best saved: %s" % sp)
                     self.best_acc = va
