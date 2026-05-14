@@ -4,7 +4,8 @@ YOLO 目标检测方案 - 推理脚本
 将检测到的数字按 x 坐标从左到右排列, 拼接为最终预测字符串
 
 用法:
-    python predict_yolo.py --model runs/detect/svhn_yolo/weights/best.pt
+    python predict_yolo.py --model checkpoints/yolo_detect/train/weights/best.pt
+    python predict_yolo.py --model best.pt --config yolo --conf 0.3
 """
 import argparse
 import os
@@ -15,8 +16,10 @@ import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from config import load_config, get_data_dir
 
-def yolo_predict(model_path, test_dir, output_csv, imgsz=320, conf=0.25):
+
+def yolo_predict(model_path, test_dir, output_csv, imgsz=320, conf=0.25, batch_size=64):
     try:
         from ultralytics import YOLO
     except ImportError:
@@ -28,8 +31,6 @@ def yolo_predict(model_path, test_dir, output_csv, imgsz=320, conf=0.25):
     print("Predicting %d images..." % len(test_imgs))
 
     results_list = []
-    # Process in batches
-    batch_size = 64
     for start in range(0, len(test_imgs), batch_size):
         batch = test_imgs[start:start + batch_size]
         preds = model.predict(batch, imgsz=imgsz, conf=conf, verbose=False)
@@ -41,7 +42,6 @@ def yolo_predict(model_path, test_dir, output_csv, imgsz=320, conf=0.25):
                 results_list.append([fname, ""])
                 continue
 
-            # 按 x 坐标排序, 拼接数字
             detections = []
             for box in boxes:
                 cls = int(box.cls[0].item())
@@ -61,13 +61,19 @@ def yolo_predict(model_path, test_dir, output_csv, imgsz=320, conf=0.25):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", required=True, help="YOLO model path")
-    parser.add_argument("--test_dir", default="./data/mchar_test_a/mchar_test_a")
+    parser.add_argument("--config", default="yolo", help="配置文件名")
     parser.add_argument("--output", default="result_yolo.csv")
-    parser.add_argument("--imgsz", type=int, default=320)
-    parser.add_argument("--conf", type=float, default=0.25)
+    parser.add_argument("--conf", type=float, default=None)
     args = parser.parse_args()
 
-    yolo_predict(args.model, args.test_dir, args.output, args.imgsz, args.conf)
+    cfg = load_config(args.config)
+    data_dir = get_data_dir(cfg)
+
+    imgsz = getattr(cfg, 'yolo_imgsz', 320)
+    conf = args.conf if args.conf is not None else getattr(cfg, 'yolo_conf', 0.25)
+    test_dir = data_dir['test_data']
+
+    yolo_predict(args.model, test_dir, args.output, imgsz, conf, cfg.batch_size)
 
 
 if __name__ == "__main__":

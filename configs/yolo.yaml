@@ -1,0 +1,19 @@
+# ============================================================
+#  YOLO 目标检测方案
+#  思路: 每个数字视为独立检测目标 (0-9), 按 x 坐标排列拼接
+#  预期 mAP50: ~89%
+# ============================================================
+
+experiment_name: "yolo_detect"
+model_name: "yolo"
+
+# ── YOLO 专用参数 ──
+yolo_model: "yolov8s.pt"            # yolov8n.pt | yolov8s.pt | yolov8m.pt
+yolo_data: "./data/yolo/svhn.yaml"
+yolo_imgsz: 320
+yolo_conf: 0.25                     # 推理置信度阈值
+yolo_patience: 10                   # early stopping patience
+
+# ── 通用参数 (覆盖 default.yaml) ──
+epochs: 50
+batch_size: 64
