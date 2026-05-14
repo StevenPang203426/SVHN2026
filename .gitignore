@@ -1,0 +1,60 @@
+# ============================================================
+#  .gitignore — SVHN 街景字符识别项目
+# ============================================================
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# ── 虚拟环境 ──
+.venv/
+venv/
+env/
+.env/
+.python-version
+
+# ── 数据集（体积大，不入库） ──
+data/mchar_train/
+data/mchar_val/
+data/mchar_test_a/
+data/*.zip
+data/*.json
+data/*.csv
+data/yolo/
+
+# ── 模型权重 ──
+checkpoints/
+runs/
+*.pth
+*.pt
+*.onnx
+
+# ── 日志与实验追踪 ──
+logs/
+wandb/
+*.log
+
+# ── 推理结果 ──
+result*.csv
+
+# ── IDE / 编辑器 ──
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Jupyter ──
+.ipynb_checkpoints/
+*.ipynb
+
+# ── 系统文件 ──
+__MACOSX/
