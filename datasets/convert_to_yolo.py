@@ -99,7 +99,7 @@ def main():
     print("Converting SVHN to YOLO format...")
 
     # Train
-    train_img = os.path.join(args.data_dir, "mchar_train", "mchar_train")
+    train_img = os.path.join(args.data_dir, "mchar_train")
     train_lbl = os.path.join(args.data_dir, "mchar_train.json")
     if os.path.exists(train_lbl) and os.path.getsize(train_lbl) > 0:
         convert_split(train_img, train_lbl, args.output_dir, "train")
@@ -107,7 +107,7 @@ def main():
         print("  [SKIP] train label not found or empty")
 
     # Val
-    val_img = os.path.join(args.data_dir, "mchar_val", "mchar_val")
+    val_img = os.path.join(args.data_dir, "mchar_val")
     val_lbl = os.path.join(args.data_dir, "mchar_val.json")
     if os.path.exists(val_lbl) and os.path.getsize(val_lbl) > 0:
         convert_split(val_img, val_lbl, args.output_dir, "val")
