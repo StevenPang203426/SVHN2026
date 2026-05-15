@@ -1,0 +1,29 @@
+# ============================================================
+#  因果反事实增强 + YOLO26n 检测方案
+#  亮点: 基于因果推断的数据增强 (detect_confounds → Do-干预)
+#  原始成绩: 0.9346 (第 7 名)
+# ============================================================
+
+experiment_name: "causal_yolo"
+model_name: "yolo"
+
+# ── YOLO 专用参数 ──
+yolo_model: "yolo26n.pt"            # YOLO26n, 比 YOLOv8s 更强
+yolo_data: "./data/yolo/svhn.yaml"  # 数据集 YAML (增强后会自动覆盖)
+yolo_imgsz: 320
+yolo_conf: 0.3                      # 推理置信度阈值 (原实验验证 0.3 优于 0.25)
+yolo_patience: 10
+yolo_seed: 42                       # 训练随机种子
+
+# ── 因果增强参数 ──
+use_causal_augment: true             # 是否启用因果反事实增强
+causal_strategy: "targeted"          # targeted | mixed | random
+augment_count: 4                     # 每张图的常规增强次数
+cf_augment_count: 2                  # 每张图的反事实样本数
+rare_extra_count: 2                  # 稀有类别额外增强次数
+use_val_for_train: true              # 是否将 80% 验证集加入训练
+val_train_ratio: 0.8
+
+# ── 通用参数 (覆盖 default.yaml) ──
+epochs: 50
+batch_size: 128                      # 需要 ~10GB 显存
