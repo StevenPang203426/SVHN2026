@@ -9,7 +9,7 @@
 
 | 维度 | 原实验 (CausalYOLOSvhn) | 整合后 (主项目) |
 |------|------------------------|----------------|
-| 模型 | YOLO11m | 通过 `configs/causal_yolo.yaml` 配置 |
+| 模型 | YOLO11m (已更新为 YOLO26n) | 通过 `configs/causal_yolo.yaml` 配置 |
 | 数据增强 | `causal_augment.py` (独立脚本) | `datasets/causal_augment.py` (模块化) |
 | 数据下载 | `get_dataset.py` (独立脚本) | `datasets/download.py` (合并升级) |
 | 训练入口 | `train.py` (硬编码路径) | `train_yolo.py` (YAML 配置驱动) |

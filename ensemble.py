@@ -99,23 +99,29 @@ def load_yolo_model(path):
     return model
 
 
-def yolo_predict_paths(yolo_model, img_paths, imgsz=320, conf=0.25):
-    """YOLO 预测一组图片路径, 返回 {filename: pred_str}"""
-    preds = yolo_model.predict(img_paths, imgsz=imgsz, conf=conf, verbose=False)
+def yolo_predict_paths(yolo_model, img_paths, imgsz=320, conf=0.25, batch_size=32):
+    """YOLO 预测一组图片路径, 返回 {filename: pred_str}
+
+    分批推理 + stream=True 避免显存溢出
+    """
     results = {}
-    for img_path, result in zip(img_paths, preds):
-        fname = os.path.basename(img_path)
-        boxes = result.boxes
-        if len(boxes) == 0:
-            results[fname] = ""
-        else:
-            detections = []
-            for box in boxes:
-                cls = int(box.cls[0].item())
-                x1 = box.xyxy[0][0].item()
-                detections.append((x1, cls))
-            detections.sort(key=lambda d: d[0])
-            results[fname] = ''.join(str(d[1]) for d in detections)
+    for start in tqdm(range(0, len(img_paths), batch_size), desc="  YOLO batch"):
+        batch = img_paths[start:start + batch_size]
+        preds = yolo_model.predict(batch, imgsz=imgsz, conf=conf,
+                                   verbose=False, stream=True)
+        for img_path, result in zip(batch, preds):
+            fname = os.path.basename(img_path)
+            boxes = result.boxes
+            if len(boxes) == 0:
+                results[fname] = ""
+            else:
+                detections = []
+                for box in boxes:
+                    cls = int(box.cls[0].item())
+                    x1 = box.xyxy[0][0].item()
+                    detections.append((x1, cls))
+                detections.sort(key=lambda d: d[0])
+                results[fname] = ''.join(str(d[1]) for d in detections)
     return results
 
 
