@@ -181,6 +181,10 @@ def main():
     parser.add_argument("--output", default="result_ensemble.csv")
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--data_path", default="./data")
+    parser.add_argument("--config", type=str, default=None,
+                        help="实验配置名 (用于读取 yolo_conf 等参数)")
+    parser.add_argument("--yolo_conf", type=float, default=None,
+                        help="YOLO 推理置信度阈值 (覆盖配置文件)")
     parser.add_argument("--eval_val", action="store_true",
                         help="在验证集上评估集成 Acc")
     args = parser.parse_args()
@@ -231,6 +235,8 @@ def main():
     print("  Strategy:   %s" % args.strategy)
     print("  CLS models: %d" % len(cls_models_info))
     print("  YOLO models: %d" % len(yolo_models_info))
+    print("  CLS weights: %s" % cls_weights)
+    print("  YOLO weights: %s" % yolo_weights)
     print("  Eval val:   %s" % args.eval_val)
     print("=" * 60)
 
@@ -242,8 +248,10 @@ def main():
         yolo_models = [load_yolo_model(p) for p in yolo_models_info]
 
     # 加载数据
-    cfg = load_config()
+    cfg = load_config(args.config)
     cfg.dataset_path = args.data_path
+    if args.yolo_conf is not None:
+        cfg.yolo_conf = args.yolo_conf
     data_dir = get_data_dir(cfg)
 
     mode = 'val' if args.eval_val else 'test'
@@ -254,15 +262,18 @@ def main():
 
     # 如果有 YOLO, 需要收集图片路径做批量预测
     yolo_preds = {}
+    yolo_ordered_fnames = []  # val 模式下按 index 对应
     if has_yolo:
         if mode == 'test':
             all_paths = sorted(glob(data_dir['test_data'] + '*.png'))
         else:
             all_paths = sorted(glob(data_dir['val_data'] + '*.png'))
 
+        yolo_ordered_fnames = [os.path.basename(p) for p in all_paths]
+
         print("\n[YOLO] Predicting %d images..." % len(all_paths))
-        imgsz = 320
-        conf = 0.25
+        imgsz = getattr(cfg, 'yolo_imgsz', 320)
+        conf = getattr(cfg, 'yolo_conf', 0.25)
         for ym in yolo_models:
             yp = yolo_predict_paths(ym, all_paths, imgsz, conf)
             for fname, pred_str in yp.items():
@@ -312,16 +323,23 @@ def main():
                     weights = list(cls_weights)
 
                     # 2) YOLO 预测 (如果有)
-                    if has_yolo and mode == 'val':
-                        idx = total + b if mode == 'val' else 0
-                        pass
-                    elif has_yolo and img_names is not None:
-                        fname = os.path.basename(img_names[b])
-                        yp_list = yolo_preds.get(fname, [])
-                        for i, yp in enumerate(yp_list):
-                            votes.append(yp)
-                            w = yolo_weights[i] if i < len(yolo_weights) else 1.0
-                            weights.append(w)
+                    if has_yolo:
+                        if mode == 'val':
+                            # val 模式下用全局 index 对应排序后的文件名
+                            idx = total + b
+                            if idx < len(yolo_ordered_fnames):
+                                fname = yolo_ordered_fnames[idx]
+                            else:
+                                fname = None
+                        else:
+                            fname = os.path.basename(img_names[b]) if img_names else None
+
+                        if fname is not None:
+                            yp_list = yolo_preds.get(fname, [])
+                            for i, yp in enumerate(yp_list):
+                                votes.append(yp)
+                                w = yolo_weights[i] if i < len(yolo_weights) else 1.0
+                                weights.append(w)
 
                     winner = ensemble_vote_strings(votes, weights)
 
