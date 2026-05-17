@@ -8,7 +8,7 @@ experiment_name: "causal_yolo"
 model_name: "yolo"
 
 # ── YOLO 专用参数 ──
-yolo_model: "yolo26n.pt"            # YOLO26n, 比 YOLOv8s 更强
+yolo_model: "yolo11m.pt"            # YOLO26n, 比 YOLOv8s 更强
 yolo_data: "./data/yolo/svhn.yaml"  # 数据集 YAML (增强后会自动覆盖)
 yolo_imgsz: 320
 yolo_conf: 0.3                      # 推理置信度阈值 (原实验验证 0.3 优于 0.25)

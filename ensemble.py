@@ -10,22 +10,29 @@ YOLO 模型只能参与投票 (vote), 因为 YOLO 的输出是检测框而非 lo
 用法:
     # 纯分类模型集成 (logits 平均)
     python ensemble.py \
-        --models checkpoints/baseline/best.pth checkpoints/improved_v1/best.pth \
+        --models checkpoints/improved_v2/improved_v2_focal_mixup-ep59-acc80.63.pth checkpoints/improved_v1/best.pth \
         --archs resnet50 se_resnet50 \
         --weights 0.4 0.6 \
         --strategy logits
 
     # 分类 + YOLO 混合投票
     python ensemble.py \
-        --models checkpoints/baseline/best.pth checkpoints/improved_v1/best.pth \
-                 checkpoints/yolo_detect/train/weights/best.pt \
-        --archs resnet50 se_resnet50 yolo \
+        --models checkpoints/improved_v2/improved_v2_focal_mixup-ep59-acc80.63.pth \
+                 runs/detect/checkpoints/causal_yolo/train/weights/last.pt \
+        --archs se_resnet50 yolo \
         --strategy vote
 
     # 在验证集上评估集成效果
     python ensemble.py \
         --models ckpt1.pth ckpt2.pth ckpt3.pth \
         --archs resnet50 se_resnet50 yolo \
+        --strategy vote --eval_val
+
+
+    python ensemble.py \
+        --models checkpoints/improved_v2/improved_v2_focal_mixup-ep59-acc80.63.pth \
+                 runs/detect/checkpoints/causal_yolo/train/weights/last.pt \
+        --archs resnet50 yolo \
         --strategy vote --eval_val
 """
 import argparse

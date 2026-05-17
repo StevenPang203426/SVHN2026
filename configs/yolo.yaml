@@ -8,7 +8,7 @@ experiment_name: "yolo_detect"
 model_name: "yolo"
 
 # ── YOLO 专用参数 ──
-yolo_model: "yolov8s.pt"            # yolov8n.pt | yolov8s.pt | yolov8m.pt
+yolo_model: "yolo26n.pt"            # yolov8n.pt | yolov8s.pt | yolov8m.pt
 yolo_data: "./data/yolo/svhn.yaml"
 yolo_imgsz: 320
 yolo_conf: 0.25                     # 推理置信度阈值

@@ -13,10 +13,13 @@
 
     # 评估 SE-ResNet50
     python evaluate.py --model checkpoints/improved_v1/best.pth --config improved_v1
+    python evaluate.py --model checkpoints/improved_v2_focal_mixup-ep59-acc80.63.pth --config improved_v2
 
     # 评估 YOLO 模型
     python evaluate.py --model checkpoints/yolo_detect/train/weights/best.pt --config yolo
-
+    python evaluate.py --model runs/detect/svhn_yolo/weights/best.pt  --config yolo
+    python evaluate.py --model runs/detect/checkpoints/causal_yolo/train/weights/best.pt --config causal_yolo
+    python evaluate.py --model checkpoints/best.pt --config causal_yolo
     # 同时输出逐位准确率
     python evaluate.py --model checkpoints/baseline/best.pth --config baseline --per_digit
 """
