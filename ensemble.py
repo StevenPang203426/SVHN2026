@@ -15,11 +15,19 @@ YOLO 模型只能参与投票 (vote), 因为 YOLO 的输出是检测框而非 lo
         --weights 0.4 0.6 \
         --strategy logits
 
-    # 分类 + YOLO 混合投票
+    # 分类 + YOLO 混合投票 (等权)
     python ensemble.py \
         --models checkpoints/improved_v2/improved_v2_focal_mixup-ep59-acc80.63.pth \
                  runs/detect/checkpoints/causal_yolo/train/weights/last.pt \
-        --archs se_resnet50 yolo \
+        --archs resnet50 yolo \
+        --strategy vote
+
+    # YOLO 为主, ResNet 为辅 (权重 1:5, YOLO 投票权重是 ResNet 的 5 倍)
+    python ensemble.py \
+        --models checkpoints/improved_v2/improved_v2_focal_mixup-ep59-acc80.63.pth \
+                 runs/detect/checkpoints/causal_yolo/train/weights/last.pt \
+        --archs resnet50 yolo \
+        --weights 1 5 \
         --strategy vote
 
     # 在验证集上评估集成效果
@@ -129,19 +137,25 @@ def yolo_predict_paths(yolo_model, img_paths, imgsz=320, conf=0.25, batch_size=3
 #  集成逻辑
 # ─────────────────────────────────────────────
 
-def ensemble_vote_strings(all_predictions):
+def ensemble_vote_strings(all_predictions, vote_weights=None):
     """
-    对多个模型的字符串预测做多数投票
+    对多个模型的字符串预测做加权投票
 
     Args:
         all_predictions: list[str], 每个模型对同一张图的预测
+        vote_weights:    list[float] 或 None, 每个模型的投票权重
+                         None 时每个模型权重为 1 (等权投票)
     Returns:
         str: 投票结果
     """
     if len(all_predictions) == 1:
         return all_predictions[0]
-    counter = Counter(all_predictions)
-    return counter.most_common(1)[0][0]
+    if vote_weights is None:
+        vote_weights = [1.0] * len(all_predictions)
+    counter = {}
+    for pred, w in zip(all_predictions, vote_weights):
+        counter[pred] = counter.get(pred, 0.0) + w
+    return max(counter, key=counter.get)
 
 
 def ensemble_logits_avg(logits_list, weights):
@@ -160,7 +174,9 @@ def main():
     parser.add_argument("--archs", nargs='+', required=True,
                         help="对应架构 (resnet50 / se_resnet50 / yolo)")
     parser.add_argument("--weights", nargs='+', type=float, default=None,
-                        help="权重 (仅 logits 策略)")
+                        help="每个模型的权重, 与 --models 一一对应. "
+                             "vote 策略下为投票权重, logits 策略下为 logits 加权系数. "
+                             "例: --weights 1 5 表示第一个模型权重1, 第二个权重5")
     parser.add_argument("--strategy", choices=["logits", "vote"], default="vote")
     parser.add_argument("--output", default="result_ensemble.csv")
     parser.add_argument("--batch_size", type=int, default=64)
@@ -186,12 +202,27 @@ def main():
         print("[WARN] YOLO 模型不支持 logits 策略, 自动切换为 vote")
         args.strategy = "vote"
 
-    # 权重处理 (仅 logits 策略)
+    # 权重处理
+    # vote 策略: weights 与 --models 一一对应, 作为投票权重
+    # logits 策略: weights 仅对分类模型有效, 作为 logits 加权系数
+    if args.weights is None:
+        args.weights = [1.0] * len(args.models)
+    assert len(args.weights) == len(args.models), \
+        "--weights 数量 (%d) 必须与 --models 数量 (%d) 一致" % (
+            len(args.weights), len(args.models))
+
+    # 分离分类和 YOLO 的权重
+    cls_weights = []
+    yolo_weights = []
+    for (path, arch), w in zip(zip(args.models, args.archs), args.weights):
+        if arch == 'yolo':
+            yolo_weights.append(w)
+        else:
+            cls_weights.append(w)
+
     if args.strategy == "logits":
-        if args.weights is None:
-            args.weights = [1.0 / len(cls_models_info)] * len(cls_models_info)
-        total = sum(args.weights)
-        args.weights = [w / total for w in args.weights]
+        total_w = sum(cls_weights)
+        cls_weights = [w / total_w for w in cls_weights]
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -257,7 +288,7 @@ def main():
             if args.strategy == "logits":
                 # 仅分类模型, logits 加权平均
                 all_logits = [cls_logits_batch(m, img) for m in cls_models]
-                avg = ensemble_logits_avg(all_logits, args.weights)
+                avg = ensemble_logits_avg(all_logits, cls_weights)
                 for b in range(B):
                     s = ''.join(char_list[avg[j][b].argmax().item()] for j in range(4))
                     if mode == 'val':
@@ -270,7 +301,7 @@ def main():
                         results.append([fname, s])
 
             else:
-                # vote 策略: 收集所有模型的字符串预测
+                # vote 策略: 收集所有模型的字符串预测 + 权重
                 # 1) 分类模型预测
                 cls_preds_batch = []
                 for m in cls_models:
@@ -278,20 +309,21 @@ def main():
 
                 for b in range(B):
                     votes = [cp[b] for cp in cls_preds_batch]
+                    weights = list(cls_weights)
 
                     # 2) YOLO 预测 (如果有)
                     if has_yolo and mode == 'val':
-                        # val 模式下用 index 对应 (顺序一致)
                         idx = total + b if mode == 'val' else 0
-                        # 由于 val 模式无法直接获取文件名,
-                        # 这里跳过 YOLO 在 val 上的投票 (见下方单独处理)
                         pass
                     elif has_yolo and img_names is not None:
                         fname = os.path.basename(img_names[b])
-                        for yp_list in yolo_preds.get(fname, []):
-                            votes.append(yp_list)
+                        yp_list = yolo_preds.get(fname, [])
+                        for i, yp in enumerate(yp_list):
+                            votes.append(yp)
+                            w = yolo_weights[i] if i < len(yolo_weights) else 1.0
+                            weights.append(w)
 
-                    winner = ensemble_vote_strings(votes)
+                    winner = ensemble_vote_strings(votes, weights)
 
                     if mode == 'val':
                         gt = ''.join(char_list[label[b, j].item()] for j in range(4))
